@@ -6,23 +6,39 @@
     <title>النظام المركزي المطور للمنشأة</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     
+    <!-- تضمين مكتبات Firebase السحابية الرسمية -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+
     <style>
-        /* ── التنسيقات الأساسية لمنع التداخل والـ CSS الداخلي المستقل ── */
+        /* ── نفس التنسيقات والواجهات الأصلية المحمية من التداخل تماماً ── */
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
         body { background-color: #090d16; color: #f1f5f9; min-height: 100vh; padding-bottom: 40px; }
         
-        /* الرأس ولوحة التحكم العلوية */
-        header { background-color: #0f1524; border-bottom: 2px solid #f59e0b; padding: 15px; position: sticky; top: 0; z-index: 100; shadow: 0 4px 6px -1px rgba(0,0,0,0.5); }
+        /* شاشة القفل والترحيب الذكية */
+        #auth-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: #090d16; z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
+        .auth-card { background: #0f1524; border: 2px solid #f59e0b; border-radius: 20px; padding: 30px 20px; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.7); }
+        .welcome-msg { font-size: 20px; font-weight: 900; color: #f59e0b; margin-bottom: 8px; min-height: 32px; }
+        .welcome-emoji { font-size: 40px; margin-bottom: 15px; display: inline-block; animation: bounce 1.5s infinite; }
+        .auth-card p { font-size: 13px; color: #94a3b8; margin-bottom: 20px; }
+        .pin-input { font-size: 24px; letter-spacing: 8px; font-weight: bold; text-align: center; width: 80%; max-width: 220px; padding: 10px; border-radius: 12px; background: #090d16; border: 2px solid rgba(255,255,255,0.1); color: #fff; outline: none; transition: border 0.3s; }
+        .pin-input:focus { border-color: #f59e0b; }
+        .auth-error { color: #ef4444; font-size: 11px; font-weight: bold; margin-top: 10px; display: none; }
+        
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+        /* باقي تنسيقات النظام الأساسي بدون أي تغيير لتجنب التداخل */
+        header { background-color: #0f1524; border-bottom: 2px solid #f59e0b; padding: 15px; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5); }
         .header-container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 15px; }
         @media(min-width: 768px) { .header-container { flex-direction: row; } }
         
         .header-title h1 { font-size: 22px; font-weight: 900; color: #f59e0b; margin-bottom: 2px; }
         .header-title p { font-size: 11px; color: #94a3b8; }
         
-        /* العدادات العلوية السريعة */
         .dashboard-widgets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
         @media(min-width: 768px) { .dashboard-widgets { width: auto; } }
-        .widget-card { background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); padding: 8px 12px; rounded-radius: 10px; border-radius: 10px; text-align: center; min-width: 95px; }
+        .widget-card { background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); padding: 8px 12px; border-radius: 10px; text-align: center; min-width: 95px; }
         .widget-card.water-w { background: rgba(59, 130, 246, 0.08); border-color: rgba(59, 130, 246, 0.2); }
         .widget-card.visit-w { background: rgba(147, 51, 234, 0.08); border-color: rgba(147, 51, 234, 0.2); }
         .widget-card span { display: block; }
@@ -32,7 +48,6 @@
         .widget-card.water-w .widget-val { color: #3b82f6; }
         .widget-card.visit-w .widget-val { color: #a855f7; }
 
-        /* أزرار التبويب الرئيسية */
         .tabs-nav { display: flex; background-color: #0f1524; border-bottom: 1px solid rgba(255,255,255,0.08); position: sticky; top: 75px; z-index: 99; overflow-x: auto; }
         .tab-btn { flex: 1; min-width: 90px; padding: 12px 5px; text-align: center; font-size: 12px; font-weight: bold; background: none; border: none; border-bottom: 3px solid transparent; color: #94a3b8; cursor: pointer; transition: all 0.2s; }
         .tab-btn.active-mazout { color: #f59e0b; border-bottom-color: #f59e0b; }
@@ -40,7 +55,6 @@
         .tab-btn.active-visit { color: #a855f7; border-bottom-color: #a855f7; }
         .tab-btn.active-records { color: #10b981; border-bottom-color: #10b981; }
 
-        /* الهيكل والمحتوى المتجاوب */
         main { max-width: 850px; margin: 20px auto; padding: 0 15px; }
         section { display: none; }
         section.active-section { display: block; }
@@ -50,19 +64,16 @@
         .section-title.visit-t { border-right-color: #a855f7; }
         .section-title h2 { font-size: 14px; font-weight: bold; color: #e2e8f0; }
 
-        /* شبكة الخزانات لمنع التداخل العمودي */
         .tanks-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
         @media(min-width: 480px) { .tanks-grid { grid-template-columns: repeat(4, 1fr); } }
         
         .tank-node { background: #0f1524; border: 1px solid rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
         .tank-title { font-size: 11px; font-weight: bold; color: #94a3b8; }
         
-        /* شكل الخزان الجمالي */
-        .tank-visual { wwidth: 30px; height: 45px; background: #090d16; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; position: relative; overflow: hidden; margin: 2px 0; }
+        .tank-visual { width: 30px; height: 45px; background: #090d16; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; position: relative; overflow: hidden; margin: 2px 0; }
         .tank-fill { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, #f59e0b, #d97706); transition: height 0.3s; }
         
-        /* الحقول والإدخالات */
-        input[type=number], input[type=text], input[type=date], textarea { width: 100%; bg-color: #090d16; background-color: #090d16; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px; border-radius: 8px; text-align: center; font-size: 12px; font-weight: bold; outline: none; }
+        input[type=number], input[type=text], input[type=date], textarea { width: 100%; background-color: #090d16; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px; border-radius: 8px; text-align: center; font-size: 12px; font-weight: bold; outline: none; }
         input:focus, textarea:focus { border-color: #f59e0b; }
         .water-inputs input:focus { border-color: #3b82f6; }
         .visit-inputs input:focus, .visit-inputs textarea:focus { border-color: #a855f7; }
@@ -71,23 +82,19 @@
         .input-group label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 4px; text-align: right; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-        /* لافتات الملخص والبطاقات والمجموع */
         .summary-banner { background: #0f1524; border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 12px; }
         .banner-label { color: #94a3b8; }
         .banner-val { font-size: 16px; font-weight: 900; }
         .badge-pct { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); color: #10b981; padding: 2px 8px; border-radius: 8px; font-weight: bold; font-size: 12px; }
 
-        /* الصناديق الكبيرة المجمعة للنماذج */
-        .form-box { background: linear-gradient(to bottom border, #0f1524, #131b2e); background-color: #0f1524; border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 16px; margin-top: 15px; }
+        .form-box { background-color: #0f1524; border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 16px; margin-top: 15px; }
         
-        /* الأزرار الملونة الثابتة */
         .btn-main { width: 100%; border: none; padding: 11px; font-size: 12px; font-weight: 900; border-radius: 10px; cursor: pointer; text-align: center; margin-top: 5px; transition: background 0.2s; }
         .btn-mazout { background: linear-gradient(135deg, #f59e0b, #d97706); color: #090d16; }
         .btn-water { background: #2563eb; color: #fff; }
         .btn-visit { background: #7c3aed; color: #fff; }
         .btn-main:active { transform: scale(0.99); }
 
-        /* مربعات رفع وتوثيق الصور المصغرة المعاينة */
         .photo-uploader { background: #090d16; padding: 6px; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; text-align: center; margin-top: 4px; }
         .photo-label { color: #f59e0b; font-size: 10px; font-weight: bold; cursor: pointer; display: block; }
         .water-uploader .photo-label { color: #3b82f6; }
@@ -96,7 +103,6 @@
         .img-preview-box { width: 38px; height: 38px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); margin: 4px auto 0 auto; overflow: hidden; display: none; }
         .img-preview-box img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
 
-        /* تصميم البطاقات والسجلات المؤرشفة بنظام كروت شبكي منسق */
         .logs-display-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
         @media(min-width: 600px) { .logs-display-grid { grid-template-columns: 1fr 1fr; } }
         
@@ -105,25 +111,30 @@
         .log-card-body { background: #090d16; padding: 8px; border-radius: 6px; display: flex; flex-direction: column; gap: 4px; color: #cbd5e1; font-size: 11px; }
         .log-card-photos { display: flex; gap: 8px; justify-content: center; margin-top: 4px; }
 
-        /* نافذة التكبير الذكية (Lightbox) بملء الشاشة */
         #lightbox-modal { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.92); z-index: 1000; display: none; flex-direction: column; justify-content: center; align-items: center; padding: 20px; cursor: pointer; }
         #lightbox-img { max-width: 100%; max-height: 80vh; border-radius: 8px; object-fit: contain; }
-
-        /* صندوق الطوارئ والنسخ الاحتياطي */
-        .backup-zone { background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.15); padding: 12px; border-radius: 16px; margin-bottom: 15px; font-size: 11px; }
-        .backup-title { color: #10b981; font-weight: bold; font-size: 12px; margin-bottom: 4px; }
     </style>
 </head>
 <body>
 
-    <!-- ── الرأس ولوحة التحكّم العلوية المدمجة ── -->
+    <!-- ── 🌟 شاشة القفل والترحيب العشوائي التفاعلية ── -->
+    <div id="auth-overlay">
+        <div class="auth-card">
+            <div id="welcome-emoji-box" class="welcome-emoji">👋</div>
+            <div id="welcome-message-box" class="welcome-msg">يا هلا وغلا...</div>
+            <p>يرجى إدخال رمز الدخول الميداني (6 أرقام) لبدء الجرد</p>
+            <input type="password" id="user-pin" class="pin-input" maxlength="6" oninput="checkPinCode(this.value)" placeholder="••••••" inputmode="numeric">
+            <div id="auth-error-msg" class="auth-error">❌ الرمز غير صحيح، حاول مجدداً</div>
+        </div>
+    </div>
+
+    <!-- ── الرأس ولوحة التحكّم العلوية ── -->
     <header>
         <div class="header-container">
             <div class="header-title">
-                <h1>🛡️ النظام المركزي الشامل</h1>
-                <p>إدارة الوقود الذكي • إمداد وصيانة المياه • جدول الزيارات</p>
+                <h1>🛡️ النظام السحابي المركزي للموقع</h1>
+                <p>إدارة وقود المازوت والمياه والزيارات • متصل بـ Firebase</p>
             </div>
-            <!-- العدادات التلخيصية الذكية لمنع التكديس -->
             <div class="dashboard-widgets">
                 <div class="widget-card mazout-w">
                     <span class="widget-label">🛢️ وقود المازوت</span>
@@ -141,17 +152,16 @@
         </div>
     </header>
 
-    <!-- ── شريط أزرار التنقّل (Tabs) المصلح بالكامل ── -->
+    <!-- ── شريط أزرار التنقّل (Tabs) ── -->
     <div class="tabs-nav">
         <button id="tab-monitor" onclick="switchTab('monitor')" class="tab-btn active-mazout">🛢️ رصد المازوت</button>
         <button id="tab-water" onclick="switchTab('water')" class="tab-btn">💧 إمداد المياه</button>
         <button id="tab-visits" onclick="switchTab('visits')" class="tab-btn">📅 جدول الزيارات</button>
-        <button id="tab-records" onclick="switchTab('records')" class="tab-btn">📊 الأرشيف العام</button>
+        <button id="tab-records" onclick="switchTab('records')" class="tab-btn">📊 الأرشيف السحابي</button>
     </div>
 
     <!-- ── محتوى التطبيق الرئيسي ── -->
     <main>
-
         <!-- ================= 1. تبويب رصد وقود المازوت ================= -->
         <section id="content-monitor" class="active-section">
             <div class="section-title"><h2>📉 قراءات ما قبل التعبئة (سم) وتوثيقها</h2></div>
@@ -184,7 +194,7 @@
                         <input type="number" id="meter-before" oninput="calculateCalculated()" placeholder="0">
                         <div class="photo-uploader">
                             <label class="photo-label" onclick="document.getElementById('f-mb').click()">📸 صورة العداد قبل</label>
-                            <input type="file" accept="image/*" id="f-mb" onchange="handleImageUpload(this, 'meterBeforeImg')" style="display:none;">
+                            <input type="file" accept="image/*" id="f-mb" onchange="prepareImage(this, 'meterBeforeImg')" style="display:none;">
                             <div id="preview-meterBeforeImg" class="img-preview-box"><img onclick="openLightbox(this.src)"></div>
                         </div>
                     </div>
@@ -193,7 +203,7 @@
                         <input type="number" id="meter-after" oninput="calculateCalculated()" placeholder="0">
                         <div class="photo-uploader">
                             <label class="photo-label" onclick="document.getElementById('f-ma').click()">📸 صورة العداد بعد</label>
-                            <input type="file" accept="image/*" id="f-ma" onchange="handleImageUpload(this, 'meterAfterImg')" style="display:none;">
+                            <input type="file" accept="image/*" id="f-ma" onchange="prepareImage(this, 'meterAfterImg')" style="display:none;">
                             <div id="preview-meterAfterImg" class="img-preview-box"><img onclick="openLightbox(this.src)"></div>
                         </div>
                     </div>
@@ -230,7 +240,7 @@
                         <input type="number" id="form-days" placeholder="0">
                     </div>
                 </div>
-                <button onclick="saveCurrentRecord()" class="btn-main btn-mazout">💾 ترحيل وحفظ جرد المازوت للأرشيف</button>
+                <button onclick="saveCurrentRecord()" class="btn-main btn-mazout" id="btn-save-mazout">💾 ترحيل وحفظ جرد المازوت للسحابة</button>
             </div>
         </section>
 
@@ -252,21 +262,21 @@
                     <label>نوع المياه وجودتها</label>
                     <input type="text" id="water-type-text" placeholder="مثال: مياه تحلية شرب / مياه خدمات وغسيل">
                 </div>
-                <div class="grid-2 bg-black-opaque" style="background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; margin-bottom:12px;">
+                <div class="grid-2" style="background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; margin-bottom:12px;">
                     <div class="photo-uploader water-uploader">
                         <label class="photo-label" onclick="document.getElementById('f-wi').click()">📸 صورة الفاتورة</label>
-                        <input type="file" accept="image/*" id="f-wi" onchange="handleImageUpload(this, 'waterInvoiceImg')" style="display:none;">
+                        <input type="file" accept="image/*" id="f-wi" onchange="prepareImage(this, 'waterInvoiceImg')" style="display:none;">
                         <div id="preview-waterInvoiceImg" class="img-preview-box"><img onclick="openLightbox(this.src)"></div>
                     </div>
                     <div class="photo-uploader water-uploader">
                         <label class="photo-label" onclick="document.getElementById('f-wt').click()">📸 صورة فحص نوع المياه</label>
-                        <input type="file" accept="image/*" id="f-wt" onchange="handleImageUpload(this, 'waterTypeImg')" style="display:none;">
+                        <input type="file" accept="image/*" id="f-wt" onchange="prepareImage(this, 'waterTypeImg')" style="display:none;">
                         <div id="preview-waterTypeImg" class="img-preview-box"><img onclick="openLightbox(this.src)"></div>
                     </div>
                 </div>
-                <button onclick="saveWaterLog()" class="btn-main btn-water">➕ تقييد وحفظ سجل التوريد المائي</button>
+                <button onclick="saveWaterLog()" class="btn-main btn-water" id="btn-save-water">➕ تقييد وحفظ سجل التوريد المائي</button>
             </div>
-            <div class="section-title water-t" style="margin-top:25px;"><h2>📋 السجلات المائية الموثقة بالموقع</h2></div>
+            <div class="section-title water-t" style="margin-top:25px;"><h2>📋 السجلات المائية الموثقة سحابياً</h2></div>
             <div id="water-logs-list" class="logs-display-grid"></div>
         </section>
 
@@ -293,62 +303,106 @@
                     <textarea id="visit-recommendations" placeholder="اكتب التوصيات والملاحظات الصادرة بدقة..." style="height:65px; text-align:right;"></textarea>
                 </div>
                 <div class="photo-uploader visit-uploader" style="margin-bottom:12px; padding:10px;">
-                    <label class="photo-label" onclick="document.getElementById('f-vi').click()">📸 صورة توثيق الزيارة (محضر أو تقرير الزيارة ميكانيكياً)</label>
-                    <input type="file" accept="image/*" id="f-vi" onchange="handleImageUpload(this, 'visitImg')" style="display:none;">
+                    <label class="photo-label" onclick="document.getElementById('f-vi').click()">📸 صورة توثيق الزيارة (محضر أو تقرير الزيارة)</label>
+                    <input type="file" accept="image/*" id="f-vi" onchange="prepareImage(this, 'visitImg')" style="display:none;">
                     <div id="preview-visitImg" class="img-preview-box" style="width:45px; height:45px;"><img onclick="openLightbox(this.src)"></div>
                 </div>
-                <button onclick="saveVisitLog()" class="btn-main btn-visit">➕ تقييد وتأكيد الزيارة الحالية بالجدول</button>
+                <button onclick="saveVisitLog()" class="btn-main btn-visit" id="btn-save-visit">➕ تقييد وتأكيد الزيارة الحالية بالجدول</button>
             </div>
             <div class="section-title visit-t" style="margin-top:25px;"><h2>📋 جدول الزيارات المسجلة رسمياً</h2></div>
             <div id="visits-logs-list" class="logs-display-grid"></div>
         </section>
 
-        <!-- ================= 4. تبويب الأرشيف العام والنسخ الاحتياطي والـ PDF ================= -->
+        <!-- ================= 4. تبويب الأرشيف السحابي والـ PDF ================= -->
         <section id="content-records">
-            <div class="backup-zone">
-                <div class="backup-title">🛡️ مركز حماية البيانات الفوري للعمل الميداني</div>
-                <p style="color:#94a3b8; margin-bottom:10px; line-height:1.5;">لحماية قراءاتك وصورك من الضياع التام عند مسح سجل المتصفح أو لتشغيلها على هاتف آخر، استخدم أزرار الحماية التالية:</p>
-                <div class="grid-2">
-                    <button onclick="backupSystemData()" style="background:#10b981; color:#090d16; border:none; padding:8px; font-weight:bold; border-radius:6px; cursor:pointer; font-size:11px;">📥 تحميل نسخة احتياطية (بالكامل)</button>
-                    <button onclick="document.getElementById('restore-file-input').click()" style="background:#0284c7; color:#fff; border:none; padding:8px; font-weight:bold; border-radius:6px; cursor:pointer; font-size:11px;">📤 استعادة النظام من ملف</button>
-                    <input type="file" accept=".json" id="restore-file-input" onchange="restoreSystemData(this)" style="display:none;">
-                </div>
-            </div>
-
             <div class="grid-2" style="margin-bottom:20px;">
                 <button onclick="exportToCSV()" style="background:#334155; border:1px solid rgba(255,255,255,0.1); color:#fff; padding:10px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">📊 تصدير Excel مجمع</button>
                 <button onclick="generateComprehensivePDFReport()" style="background:#f59e0b; color:#090d16; border:none; padding:10px; border-radius:8px; font-size:12px; font-weight:black; cursor:pointer;">📄 تصدير تقرير PDF الشامل</button>
             </div>
             
-            <div class="section-title" style="border-color:#64748b;"><h2>🗂️ جرد وقود المازوت التاريخي والأرشيف</h2></div>
+            <div class="section-title" style="border-color:#64748b;"><h2>🗂️ جرد وقود المازوت السحابي التاريخي</h2></div>
             <div id="records-list-container" style="display:flex; flex-direction:column; gap:10px;"></div>
         </section>
-
     </main>
 
     <!-- ── النافذة المنبثقة التفاعلية لتكبير الصور (Lightbox Modal) ── -->
     <div id="lightbox-modal" onclick="closeLightbox()">
         <span style="position:absolute; top:15px; left:20px; color:#fff; font-size:35px; font-weight:bold;">&times;</span>
         <img id="lightbox-img">
-        <p style="color:#94a3b8; font-size:11px; margin-top:10px;">اضغط في أي مكان بالخارج للإغلاق والعودة</p>
     </div>
 
-    <!-- ── الجافاسكربت البرمجي المستقل الشامل ── -->
+    <!-- ── الجافاسكربت البرمجي المطور مع نظام الـ PIN والترحيب العشوائي ── -->
     <script>
-        const CM_PER_TANK = 250;
+        // ======= 🔴 هام جداً: ضع مفاتيح مشروع Firebase الخاص بك هنا لتنشيط السحابة =======
+        const firebaseConfig = {
+            apiKey: "ضع_هنا_apiKey_الخاص_بك",
+            authDomain: "مشروعك.firebaseapp.com",
+            projectId: "مشروعك",
+            storageBucket: "مشروعك.appspot.com",
+            messagingSenderId: "000000000000",
+            appId: "1:000000000000:web:000000000000"
+        };
+        
+        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+        const db = firebase.firestore();
+        const storage = firebase.storage().ref();
+
+        // 🌟 قائمة الترحيب العشوائية التفاعلية المطابقة تماماً لطلبك
+        const welcomePhrases = [
+            { text: "يا هلا وجه السعد", emoji: "✨" },
+            { text: "نورتنا وتعدَل المزاج", emoji: "☕" },
+            { text: "يا حي ه الطلة", emoji: "👑" },
+            { text: "طلتك اليوم ردَت الروح", emoji: "❤️" },
+            { text: "اهلا بالطلة والوجه السمح", emoji: "🌸" },
+            { text: "ياهلا باللي يسعد الخاطر", emoji: "🤝" },
+            { text: "اشرقت وانورت حرفيا", emoji: "☀️" },
+            { text: "نورتنا وكنا بانتظارك", emoji: "⏳" }
+        ];
+
+        // 🛡️ تحديد الرموز السرية للمستخدمين الـ 6 (يمكنك تغيير هذه الأرقام والأسماء كما تحب)
+        const allowedUsers = {
+            "112233": "سيد محمد",
+            "445566": "ابوعلي",
+            "778899": "طارق",
+            "102030": "ابراهيم",
+            "405060": "علي",
+            "708090": "مجهول"
+        };
+
+        let currentUserName = "مستعمل مجهول";
+
+        // اختيار عبارة ترحيبية عشوائية عند بدء تشغيل الموقع فوراً
+        function initWelcomeScreen() {
+            const randomIndex = Math.floor(Math.random() * welcomePhrases.length);
+            const chosen = welcomePhrases[randomIndex];
+            document.getElementById('welcome-message-box').innerText = chosen.text;
+            document.getElementById('welcome-emoji-box').innerText = chosen.emoji;
+        }
+
+        // التحقق التلقائي من الكود المكون من 6 أرقام بمجرد كتابته
+        function checkPinCode(val) {
+            const errorMsg = document.getElementById('auth-error-msg');
+            errorMsg.style.display = "none";
+            
+            if (val.length === 6) {
+                if (allowedUsers[val]) {
+                    currentUserName = allowedUsers[val];
+                    // إخفاء شاشة القفل بتأثير فوري
+                    document.getElementById('auth-overlay').style.display = "none";
+                    console.log(`تم تسجيل الدخول بنجاح بواسطة: ${currentUserName}`);
+                } else {
+                    errorMsg.style.display = "block";
+                    document.getElementById('user-pin').value = ""; // تصفير الحقل للمحاولة مجدداً
+                }
+            }
+        }
+
         const LITERS_PER_CM = 16;
-        const TANK_CAPACITY = CM_PER_TANK * LITERS_PER_CM;
+        const TANK_CAPACITY = 250 * LITERS_PER_CM;
         const TOTAL_CAPACITY = TANK_CAPACITY * 4;
 
-        let records = JSON.parse(localStorage.getItem('all_mazout_records')) || [];
-        let waterLogs = JSON.parse(localStorage.getItem('all_water_logs')) || [];
-        let visitLogs = JSON.parse(localStorage.getItem('all_visit_logs')) || [];
-
-        let uploadedImages = {
-            before_1: null, before_2: null, before_3: null, before_4: null,
-            after_1: null, after_2: null, after_3: null, after_4: null,
-            meterBeforeImg: null, meterAfterImg: null, waterInvoiceImg: null, waterTypeImg: null, visitImg: null
-        };
+        let records = []; let waterLogs = []; let visitLogs = [];
+        let localFiles = {};
 
         let beforeCm = { 1: '', 2: '', 3: '', 4: '' };
         let afterCm = { 1: '', 2: '', 3: '', 4: '' };
@@ -359,21 +413,17 @@
                 document.getElementById(`tab-${t}`).className = "tab-btn";
             });
             document.getElementById(`content-${tab}`).classList.add('active-section');
-            
             let activeClass = tab === 'monitor' ? 'active-mazout' : (tab === 'water' ? 'active-water' : (tab === 'visits' ? 'active-visit' : 'active-records'));
             document.getElementById(`tab-${tab}`).classList.add(activeClass);
-            
-            if (tab === 'records') renderRecordsList();
-            if (tab === 'water') renderWaterLogs();
-            if (tab === 'visits') renderVisitsLogs();
         }
 
-        function handleImageUpload(input, targetKey) {
+        function prepareImage(input, targetKey) {
             const file = input.files[0];
             if (!file) return;
+            localFiles[targetKey] = file;
+            
             const reader = new FileReader();
             reader.onload = function(e) {
-                uploadedImages[targetKey] = e.target.result;
                 const previewDiv = document.getElementById(`preview-${targetKey}`);
                 if (previewDiv) {
                     previewDiv.style.display = 'block';
@@ -383,54 +433,43 @@
             reader.readAsDataURL(file);
         }
 
-        function openLightbox(src) {
-            if (!src) return;
-            const modal = document.getElementById('lightbox-modal');
-            document.getElementById('lightbox-img').src = src;
-            modal.style.display = 'flex';
-        }
-        function closeLightbox() {
-            document.getElementById('lightbox-modal').style.display = 'none';
+        async function uploadToFirebase(file, folder) {
+            if (!file) return null;
+            const fileRef = storage.child(`${folder}/${Date.now()}_${file.name}`);
+            const snapshot = await fileRef.put(file);
+            return await snapshot.ref.getDownloadURL();
         }
 
+        function openLightbox(src) { if (!src) return; const modal = document.getElementById('lightbox-modal'); document.getElementById('lightbox-img').src = src; modal.style.display = 'flex'; }
+        function closeLightbox() { document.getElementById('lightbox-modal').style.display = 'none'; }
         function getLiters(cm) { return Math.round(parseFloat(cm || 0) * LITERS_PER_CM); }
         
         function renderTankInputs() {
-            const beforeContainer = document.getElementById('before-tanks-container');
-            const afterContainer = document.getElementById('after-tanks-container');
-            beforeContainer.innerHTML = ''; afterContainer.innerHTML = '';
-            [4, 3, 2, 1].forEach(id => {
-                beforeContainer.innerHTML += createTankHTML(id, beforeCm[id], 'before');
-                afterContainer.innerHTML += createTankHTML(id, afterCm[id], 'after');
-            });
+            const bc = document.getElementById('before-tanks-container'); const ac = document.getElementById('after-tanks-container');
+            bc.innerHTML = ''; ac.innerHTML = '';
+            [4, 3, 2, 1].forEach(id => { bc.innerHTML += createTankHTML(id, beforeCm[id], 'before'); ac.innerHTML += createTankHTML(id, afterCm[id], 'after'); });
         }
 
         function createTankHTML(id, value, phase) {
             const liters = getLiters(value);
             const pct = Math.min(100, Math.max(0, Math.round((liters / TANK_CAPACITY) * 100)));
             const imgKey = `${phase}_${id}`;
-
             return `
                 <div class="tank-node">
                     <span class="tank-title">خزان ${id}</span>
-                    <div class="tank-visual">
-                        <div class="tank-fill" style="height: ${pct}%"></div>
-                    </div>
+                    <div class="tank-visual"><div class="tank-fill" style="height: ${pct}%"></div></div>
                     <input type="number" value="${value}" oninput="updateTankCm(${id}, this.value, '${phase}')" placeholder="سم">
                     <span style="font-size:9px; font-weight:bold; color:#a1a1aa; direction:ltr;">${liters.toLocaleString()} L</span>
                     <div class="photo-uploader" style="width:100%; padding:2px;">
                         <label class="photo-label" style="font-size:9px;" onclick="document.getElementById('f-${phase}-${id}').click()">📸 صورة</label>
-                        <input type="file" accept="image/*" id="f-${phase}-${id}" onchange="handleImageUpload(this, '${imgKey}')" style="display:none;">
+                        <input type="file" accept="image/*" id="f-${phase}-${id}" onchange="prepareImage(this, '${imgKey}')" style="display:none;">
                         <div id="preview-${imgKey}" class="img-preview-box" style="width:18px; height:18px; margin-top:2px;"><img onclick="openLightbox(this.src)"></div>
                     </div>
                 </div>
             `;
         }
 
-        function updateTankCm(id, value, phase) {
-            if (phase === 'before') beforeCm[id] = value; else afterCm[id] = value;
-            calculateCalculated();
-        }
+        function updateTankCm(id, value, phase) { if (phase === 'before') beforeCm[id] = value; else afterCm[id] = value; calculateCalculated(); }
 
         function calculateCalculated() {
             let totalBefore = 0; let totalAfter = 0;
@@ -442,85 +481,110 @@
 
             const mBefore = parseFloat(document.getElementById('meter-before').value) || 0;
             const mAfter = parseFloat(document.getElementById('meter-after').value) || 0;
-            const meterDiff = Math.max(0, mAfter - mBefore);
-            document.getElementById('meter-diff-display').innerText = `${meterDiff.toLocaleString()} لتر`;
+            document.getElementById('meter-diff-display').innerText = `${Math.max(0, mAfter - mBefore).toLocaleString()} لتر`;
 
             const netTankDiff = totalAfter - totalBefore;
             document.getElementById('net-tank-diff').innerText = `${netTankDiff.toLocaleString()} لتر`;
 
-            const receivedVal = parseFloat(document.getElementById('form-received').value) || 0;
-            const surplusDeficit = netTankDiff - receivedVal;
+            const surplusDeficit = netTankDiff - (parseFloat(document.getElementById('form-received').value) || 0);
             const liveElement = document.getElementById('live-surplus-deficit');
-            liveElement.innerText = `${surplusDeficit.toLocaleString()} لتر`;
-            liveElement.style.color = surplusDeficit >= 0 ? "#10b981" : "#ef4444";
-
-            document.getElementById('dash-mazout').innerText = `${totalAfter.toLocaleString()} لتر`;
+            liveElement.innerText = `${surplusDeficit.toLocaleString()} لتر`; liveElement.style.color = surplusDeficit >= 0 ? "#10b981" : "#ef4444";
         }
 
-        function updateDashboardWidgets() {
-            if(records.length > 0) { document.getElementById('dash-mazout').innerText = `${records[0].afterTotal.toLocaleString()} لتر`; }
-            if(waterLogs.length > 0) { document.getElementById('dash-water').innerText = `${parseFloat(waterLogs[0].newQty || 0).toLocaleString()} لتر`; }
-            if(visitLogs.length > 0) { document.getElementById('dash-visit').innerText = visitLogs[0].manualDate ? new Date(visitLogs[0].manualDate).toLocaleDateString('ar-SA') : '--'; }
+        function syncFirebaseData() {
+            db.collection("mazout_records").orderBy("date", "desc").onSnapshot(snapshot => {
+                records = snapshot.docs.map(doc => doc.data()); renderRecordsList();
+                if(records.length > 0) document.getElementById('dash-mazout').innerText = `${records[0].afterTotal.toLocaleString()} لتر`;
+            });
+            db.collection("water_logs").orderBy("date", "desc").onSnapshot(snapshot => {
+                waterLogs = snapshot.docs.map(doc => doc.data()); renderWaterLogs();
+                if(waterLogs.length > 0) document.getElementById('dash-water').innerText = `${parseFloat(waterLogs[0].newQty || 0).toLocaleString()} لتر`;
+            });
+            db.collection("visit_logs").orderBy("manualDate", "desc").onSnapshot(snapshot => {
+                visitLogs = snapshot.docs.map(doc => doc.data()); renderVisitsLogs();
+                if(visitLogs.length > 0) document.getElementById('dash-visit').innerText = visitLogs[0].manualDate ? new Date(visitLogs[0].manualDate).toLocaleDateString('ar-SA') : '--';
+            });
         }
 
-        function saveCurrentRecord() {
+        async function saveCurrentRecord() {
             const supplier = document.getElementById('form-supplier').value.trim();
             const received = parseFloat(document.getElementById('form-received').value) || 0;
             if (!supplier || received <= 0) { alert('يرجى كتابة اسم المورد والكمية المطلوبة بالفاتورة أولاً'); return; }
 
-            let beforeTotal = 0; let afterTotal = 0;
-            for (let i = 1; i <= 4; i++) { beforeTotal += getLiters(beforeCm[i]); afterTotal += getLiters(afterCm[i]); }
+            const btn = document.getElementById('btn-save-mazout'); btn.innerText = "⏳ جاري الرفع والمزامنة سحابياً..."; btn.disabled = true;
 
-            const record = {
-                id: Date.now(), date: new Date().toISOString(), supplier, received,
-                opDays: parseInt(document.getElementById('form-days').value) || 0,
-                beforeTotal, afterTotal, meterBefore: document.getElementById('meter-before').value, meterAfter: document.getElementById('meter-after').value,
-                images: { ...uploadedImages }
-            };
+            try {
+                let imageUrls = {};
+                for (let key of Object.keys(localFiles)) {
+                    if(key.startsWith('before_') || key.startsWith('after_') || key.startsWith('meter')) {
+                        imageUrls[key] = await uploadToFirebase(localFiles[key], 'mazout_photos');
+                    }
+                }
 
-            records.unshift(record);
-            localStorage.setItem('all_mazout_records', JSON.stringify(records));
+                let beforeTotal = 0; let afterTotal = 0;
+                for (let i = 1; i <= 4; i++) { beforeTotal += getLiters(beforeCm[i]); afterTotal += getLiters(afterCm[i]); }
 
-            document.getElementById('form-supplier').value = '';
-            document.getElementById('form-received').value = '';
-            document.getElementById('form-days').value = '';
-            document.getElementById('meter-before').value = '';
-            document.getElementById('meter-after').value = '';
-            
-            Object.keys(uploadedImages).forEach(k => {
-                uploadedImages[k] = null;
-                const p = document.getElementById(`preview-${k}`); if(p) p.style.display = 'none';
-            });
-            beforeCm = { 1: '', 2: '', 3: '', 4: '' }; afterCm = { 1: '', 2: '', 3: '', 4: '' };
-            renderTankInputs(); calculateCalculated(); updateDashboardWidgets();
-            alert('✅ تم حفظ شحنة المازوت بنجاح تام بالأرشيف.');
-            switchTab('records');
+                await db.collection("mazout_records").add({
+                    date: new Date().toISOString(), supplier, received,
+                    opDays: parseInt(document.getElementById('form-days').value) || 0,
+                    beforeTotal, afterTotal,
+                    meterBefore: document.getElementById('meter-before').value,
+                    meterAfter: document.getElementById('meter-after').value,
+                    images: imageUrls,
+                    createdBy: currentUserName // 👤 توثيق الموظف الذي أدخل القراءة
+                });
+
+                document.getElementById('form-supplier').value = ''; document.getElementById('form-received').value = '';
+                document.getElementById('form-days').value = ''; document.getElementById('meter-before').value = ''; document.getElementById('meter-after').value = '';
+                clearPreviews(); beforeCm = { 1: '', 2: '', 3: '', 4: '' }; afterCm = { 1: '', 2: '', 3: '', 4: '' };
+                renderTankInputs(); calculateCalculated();
+                alert(`✅ تم حفظ الجرد سحابياً بنجاح! شكرًا لك: ${currentUserName}`);
+                switchTab('records');
+            } catch (e) { alert('حدث خطأ أثناء الرفع السحابي، تأكد من الاتصال بالإنترنت.'); }
+            btn.innerText = "💾 ترحيل وحفظ جرد المازوت للسحابة"; btn.disabled = false;
         }
 
-        function saveWaterLog() {
+        async function saveWaterLog() {
             const oldQty = document.getElementById('water-old-qty').value;
             const newQty = document.getElementById('water-new-qty').value;
             const typeText = document.getElementById('water-type-text').value.trim();
-
             if(!oldQty || !newQty || !typeText) { alert('يرجى تعبئة كافة حقول المياه المطلوبة'); return; }
 
-            const log = { 
-                id: Date.now(), date: new Date().toISOString(), oldQty, newQty, typeText, 
-                invoiceImg: uploadedImages.waterInvoiceImg, typeImg: uploadedImages.waterTypeImg
-            };
+            const btn = document.getElementById('btn-save-water'); btn.innerText = "⏳ جاري الحفظ سحابياً..."; btn.disabled = true;
+            try {
+                const invoiceUrl = await uploadToFirebase(localFiles['waterInvoiceImg'], 'water_photos');
+                const typeUrl = await uploadToFirebase(localFiles['waterTypeImg'], 'water_photos');
 
-            waterLogs.unshift(log);
-            localStorage.setItem('all_water_logs', JSON.stringify(waterLogs));
+                await db.collection("water_logs").add({
+                    date: new Date().toISOString(), oldQty, newQty, typeText, invoiceImg: invoiceUrl, typeImg: typeUrl,
+                    createdBy: currentUserName
+                });
 
-            document.getElementById('water-old-qty').value = '';
-            document.getElementById('water-new-qty').value = '';
-            document.getElementById('water-type-text').value = '';
-            uploadedImages.waterInvoiceImg = null; uploadedImages.waterTypeImg = null;
-            document.getElementById('preview-waterInvoiceImg').style.display = 'none';
-            document.getElementById('preview-waterTypeImg').style.display = 'none';
-            
-            renderWaterLogs(); updateDashboardWidgets();
-            alert('✅ تم قيد وحفظ سجل إمداد المياه الحالي.');
+                document.getElementById('water-old-qty').value = ''; document.getElementById('water-new-qty').value = ''; document.getElementById('water-type-text').value = '';
+                clearPreviews(); alert('✅ تم قيد وحفظ سجل المياه الحالي سحابياً.');
+            } catch(e) { alert('فشل الحفظ السحابي للمياه.'); }
+            btn.innerText = "➕ تقييد وحفظ سجل التوريد المائي"; btn.disabled = false;
+        }
+
+        async function saveVisitLog() {
+            const visitor = document.getElementById('visit-visitor').value.trim();
+            const purpose = document.getElementById('visit-purpose').value.trim();
+            const manualDate = document.getElementById('visit-manual-date').value;
+            const recommendations = document.getElementById('visit-recommendations').value.trim();
+            if(!visitor || !purpose || !manualDate) { alert('يرجى كتابة جهة الزيارة وتحديد التاريخ'); return; }
+
+            const btn = document.getElementById('btn-save-visit'); btn.innerText = "⏳ جاري قيد الزيارة سحابياً..."; btn.disabled = true;
+            try {
+                const visitUrl = await uploadToFirebase(localFiles['visitImg'], 'visit_photos');
+                await db.collection("visit_logs").add({
+                    manualDate, visitor, purpose, recommendations, img: visitUrl,
+                    createdBy: currentUserName
+                });
+                document.getElementById('visit-visitor').value = ''; document.getElementById('visit-purpose').value = '';
+                document.getElementById('visit-manual-date').value = ''; document.getElementById('visit-recommendations').value = '';
+                clearPreviews(); alert('✅ تم توثيق زيارة اللجنة بالجدول السحابي بنجاح.');
+            } catch(e) { alert('فشل الحفظ السحابي للزيارة.'); }
+            btn.innerText = "➕ تقييد وتأكيد الزيارة الحالية بالجدول"; btn.disabled = false;
         }
 
         function renderWaterLogs() {
@@ -535,6 +599,7 @@
                         <div class="log-card-body">
                             <div>📉 كمية سابقة: ${parseFloat(l.oldQty).toLocaleString()} لتر</div>
                             <div>📈 كمية جديدة: ${parseFloat(l.newQty).toLocaleString()} لتر</div>
+                            <div style="font-size:10px; color:#64748b; margin-top:2px;">✍️ بواسطة: ${l.createdBy || 'غير مسجل'}</div>
                         </div>
                         <div class="log-card-photos">
                             ${l.invoiceImg ? `<div><span style="font-size:8px; color:#64748b; display:block; text-align:center;">الفاتورة</span><img src="${l.invoiceImg}" onclick="openLightbox(this.src)" style="width:32px; height:32px; object-fit:cover; border-radius:4px; border:1px solid rgba(255,255,255,0.1); cursor:pointer;"></div>` : ''}
@@ -543,28 +608,6 @@
                     </div>
                 `;
             });
-        }
-
-        function saveVisitLog() {
-            const visitor = document.getElementById('visit-visitor').value.trim();
-            const purpose = document.getElementById('visit-purpose').value.trim();
-            const manualDate = document.getElementById('visit-manual-date').value;
-            const recommendations = document.getElementById('visit-recommendations').value.trim();
-            
-            if(!visitor || !purpose || !manualDate) { alert('يرجى كتابة جهة الزيارة وتحديد التاريخ'); return; }
-
-            const log = { id: Date.now(), manualDate, visitor, purpose, recommendations, img: uploadedImages.visitImg };
-            visitLogs.unshift(log);
-            localStorage.setItem('all_visit_logs', JSON.stringify(visitLogs));
-
-            document.getElementById('visit-visitor').value = '';
-            document.getElementById('visit-purpose').value = '';
-            document.getElementById('visit-manual-date').value = '';
-            document.getElementById('visit-recommendations').value = '';
-            uploadedImages.visitImg = null; document.getElementById('preview-visitImg').style.display = 'none';
-            
-            renderVisitsLogs(); updateDashboardWidgets();
-            alert('✅ تم توثيق زيارة اللجنة بالجدول بنجاح.');
         }
 
         function renderVisitsLogs() {
@@ -580,6 +623,7 @@
                         <div class="log-card-body">
                             <div>🎯 الغرض: ${l.purpose}</div>
                             <div style="color:#f59e0b; margin-top:3px;">📋 التوصيات: ${l.recommendations || 'لا توجد ملاحظات'}</div>
+                            <div style="font-size:10px; color:#64748b; margin-top:4px;">✍️ بواسطة: ${l.createdBy || 'غير مسجل'}</div>
                         </div>
                         ${l.img ? `<div class="log-card-photos"><img src="${l.img}" onclick="openLightbox(this.src)" style="width:35px; height:35px; object-fit:cover; border-radius:4px; border:1px solid rgba(255,255,255,0.1); cursor:pointer;"></div>` : ''}
                     </div>
@@ -589,7 +633,7 @@
 
         function renderRecordsList() {
             const container = document.getElementById('records-list-container'); container.innerHTML = '';
-            if (!records.length) { container.innerHTML = '<div style="text-center:center; color:#64748b; padding:20px; font-size:12px; text-align:center;">لا توجد سجلات مازوت مؤرشفة حالياً.</div>'; return; }
+            if (!records.length) { container.innerHTML = '<div style="color:#64748b; padding:20px; font-size:12px; text-align:center;">لا توجد سجلات مازوت مسجلة سحابياً.</div>'; return; }
             records.forEach(r => {
                 const surplus = (r.afterTotal - r.beforeTotal) - r.received;
                 container.innerHTML += `
@@ -601,115 +645,50 @@
                         <div class="log-card-body">
                             <div>📥 كمية الفاتورة: ${r.received.toLocaleString()} لتر</div>
                             <div>⚖️ الفارق الإجمالي: <span style="color:${surplus>=0?'#10b981':'#ef4444'}">${surplus.toLocaleString()} لتر</span></div>
+                            <div style="font-size:10px; color:#64748b; margin-top:4px;">✍️ الموظف المسؤول: ${r.createdBy || 'غير مسجل'}</div>
                         </div>
                     </div>
                 `;
             });
         }
 
-        function backupSystemData() {
-            const dataToBackup = {
-                records: JSON.parse(localStorage.getItem('all_mazout_records')) || [],
-                waterLogs: JSON.parse(localStorage.getItem('all_water_logs')) || [],
-                visitLogs: JSON.parse(localStorage.getItem('all_visit_logs')) || []
-            };
-            const jsonString = JSON.stringify(dataToBackup);
-            const blob = new Blob([jsonString], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `نسخة_احتياطية_شاملة_${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-        }
-
-        function restoreSystemData(input) {
-            const file = input.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const parsed = JSON.parse(e.target.result);
-                    if (parsed.records || parsed.waterLogs || parsed.visitLogs) {
-                        localStorage.setItem('all_mazout_records', JSON.stringify(parsed.records || []));
-                        localStorage.setItem('all_water_logs', JSON.stringify(parsed.waterLogs || []));
-                        localStorage.setItem('all_visit_logs', JSON.stringify(parsed.visitLogs || []));
-                        
-                        records = parsed.records || []; waterLogs = parsed.waterLogs || []; visitLogs = parsed.visitLogs || [];
-                        renderRecordsList(); renderWaterLogs(); renderVisitsLogs(); updateDashboardWidgets();
-                        alert("✅ تم استيراد واستعادة كامل النظام والبيانات والصور بنجاح تام!");
-                    } else { alert("الملف المختار غير متوافق مع النظام."); }
-                } catch (err) { alert("فشل قراءة الملف المختار."); }
-            };
-            reader.readAsText(file);
-        }
+        function clearPreviews() { localFiles = {}; document.querySelectorAll('.img-preview-box').forEach(box => box.style.display = 'none'); }
 
         function exportToCSV() {
             if (!records.length) return;
-            const rows = [["التاريخ", "المورد", "كمية الفاتورة", "مخزون قبل", "مخزون بعد"]];
-            records.forEach(r => { rows.push([new Date(r.date).toISOString().split('T')[0], r.supplier, r.received, r.beforeTotal, r.afterTotal]); });
+            const rows = [["التاريخ", "المورد", "كمية الفاتورة", "مخزون قبل", "مخزون بعد", "المسؤول"]];
+            records.forEach(r => { rows.push([new Date(r.date).toISOString().split('T')[0], r.supplier, r.received, r.beforeTotal, r.afterTotal, r.createdBy || '']); });
             const csv = "\uFEFF" + rows.map(e => e.join(",")).join("\n");
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement("a"); a.href = url; a.download = "جرد_المنشأة.csv"; a.click();
+            const a = document.createElement("a"); a.href = url; a.download = "جرد_المنشأة_السحابي.csv"; a.click();
         }
 
         function generateComprehensivePDFReport() {
             const reportWindow = window.open("", "_blank");
-            const mazoutRows = records.map(r => `<tr><td>${new Date(r.date).toLocaleDateString('ar-SA')}</td><td>${r.supplier}</td><td>${r.received.toLocaleString()} لتر</td><td>${r.beforeTotal.toLocaleString()} لتر</td><td>${r.afterTotal.toLocaleString()} لتر</td></tr>`).join("");
-            const waterRows = waterLogs.map(l => `<tr><td>${new Date(l.date).toLocaleDateString('ar-SA')}</td><td>${l.typeText}</td><td>${parseFloat(l.oldQty).toLocaleString()} لتر</td><td>${parseFloat(l.newQty).toLocaleString()} لتر</td></tr>`).join("");
-            const visitRows = visitLogs.map(v => `<tr><td>${v.manualDate ? new Date(v.manualDate).toLocaleDateString('ar-SA') : 'غير محدد'}</td><td>${v.visitor}</td><td>${v.purpose}</td><td>${v.recommendations || 'لا يوجد'}</td></tr>`).join("");
+            const mRows = records.map(r => `<tr><td>${new Date(r.date).toLocaleDateString('ar-SA')}</td><td>${r.supplier}</td><td>${r.received.toLocaleString()} لتر</td><td>${r.beforeTotal.toLocaleString()} لتر</td><td>${r.afterTotal.toLocaleString()} لتر</td><td>${r.createdBy || '--'}</td></tr>`).join("");
+            const wRows = waterLogs.map(l => `<tr><td>${new Date(l.date).toLocaleDateString('ar-SA')}</td><td>${l.typeText}</td><td>${parseFloat(l.oldQty).toLocaleString()} لتر</td><td>${parseFloat(l.newQty).toLocaleString()} لتر</td><td>${l.createdBy || '--'}</td></tr>`).join("");
+            const vRows = visitLogs.map(v => `<tr><td>${v.manualDate ? new Date(v.manualDate).toLocaleDateString('ar-SA') : 'غير محدد'}</td><td>${v.visitor}</td><td>${v.purpose}</td><td>${v.recommendations || 'لا يوجد'}</td><td>${v.createdBy || '--'}</td></tr>`).join("");
 
             reportWindow.document.write(`
                 <!DOCTYPE html>
                 <html dir="rtl" lang="ar">
-                <head>
-                    <meta charset="UTF-8">
-                    <title>التقرير الرقابي الشامل والنهائي</title>
-                    <style>
-                        body { font-family: 'Segoe UI', Tahoma, sans-serif; padding: 25px; color: #1e293b; background: #fff; text-align:right; }
-                        h1 { text-align: center; font-size: 20px; margin-bottom: 5px; }
-                        h2 { border-right: 4px solid #b45309; padding-right: 8px; font-size: 14px; margin-top: 25px; color: #b45309; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; text-align: center; }
-                        th { background: #1e293b; color: white; padding: 6px; }
-                        td { padding: 6px; border-bottom: 1px solid #e2e8f0; }
-                        .btn-area { text-align: center; margin-top: 30px; }
-                        .btn { background: #b45309; color: white; border: none; padding: 8px 16px; font-weight: bold; cursor: pointer; border-radius: 4px; }
-                        @media print { .btn-area { display: none; } }
-                    </style>
-                </head>
-                <body>
-                    <h1>📋 التقرير الرقابي الشامل والنهائي للموقع</h1>
-                    <div style="text-align:center; font-size:11px; color:#64748b;">تاريخ التصدير المعتمد: ${new Date().toLocaleDateString('ar-SA')}</div>
-                    
-                    <h2>1. حركة تموين وقود المازوت والديزل الميدانية</h2>
-                    <table>
-                        <thead><tr><th>التاريخ</th><th>المورد</th><th>كمية الفاتورة</th><th>قبل التعبئة</th><th>بعد التعبئة</th></tr></thead>
-                        <tbody>${mazoutRows || '<tr><td colspan="5">لا توجد سجلات مازوت مسجلة</td></tr>'}</tbody>
-                    </table>
-
-                    <h2>2. سجل إمداد وتوريد مياه المنشأة</h2>
-                    <table>
-                        <thead><tr><th>التاريخ</th><th>نوع المياه والخدمة</th><th>الكمية السابقة</th><th>الكمية الجديدة</th></tr></thead>
-                        <tbody>${waterRows || '<tr><td colspan="4">لا توجد سجلات توريد مياه</td></tr>'}</tbody>
-                    </table>
-
-                    <h2>3. جدول الزيارات الميدانية واللجان التفتيشية</h2>
-                    <table>
-                        <thead><tr><th>تاريخ الزيارة</th><th>الجهة الزائرة والمسؤول</th><th>الغرض الفعلي من الزيارة</th><th>التوصيات والملاحظات</th></tr></thead>
-                        <tbody>${visitRows || '<tr><td colspan="4">لا توجد زيارات مقيدة حالياً</td></tr>'}</tbody>
-                    </table>
-
-                    <div class="btn-area"><button class="btn" onclick="window.print()">تصدير وحفظ المستند بصيغة PDF الشاملة 📥</button></div>
-                </body>
-                </html>
+                <head><meta charset="UTF-8"><title>التقرير الرقابي السحابي الشامل</title>
+                <style>body { font-family: 'Segoe UI', sans-serif; padding:25px; text-align:right; color:#1e293b; } h1{text-align:center;font-size:20px;} h2{border-right:4px solid #b45309; padding-right:8px; font-size:14px; margin-top:25px; color:#b45309;} table{width:100%; border-collapse:collapse; margin-top:10px; font-size:11px; text-align:center;} th{background:#1e293b; color:white; padding:6px;} td{padding:6px; border-bottom:1px solid #e2e8f0;} .btn-area{text-align:center; margin-top:30px;} .btn{background:#b45309; color:white; border:none; padding:8px 16px; font-weight:bold; cursor:pointer;} @media print{.btn-area{display:none;}}</style></head>
+                <body><h1>📋 التقرير الرقابي الشامل والنهائي للموقع (سحابي)</h1><div style="text-align:center; font-size:11px; color:#64748b;">تاريخ التصدير: ${new Date().toLocaleDateString('ar-SA')}</div>
+                <h2>1. حركة تموين وقود المازوت</h2><table><thead><tr><th>التاريخ</th><th>المورد</th><th>كمية الفاتورة</th><th>قبل التعبئة</th><th>بعد التعبئة</th><th>المسؤول</th></tr></thead><tbody>${mRows || '<tr><td colspan="6">لا توجد سجلات</td></tr>'}</tbody></table>
+                <h2>2. سجل إمداد مياه المنشأة</h2><table><thead><tr><th>التاريخ</th><th>نوع المياه والخدمة</th><th>الكمية السابقة</th><th>الكمية الجديدة</th><th>المسؤول</th></tr></thead><tbody>${wRows || '<tr><td colspan="5">لا توجد سجلات</td></tr>'}</tbody></table>
+                <h2>3. جدول الزيارات الميدانية</h2><table><thead><tr><th>تاريخ الزيارة</th><th>الجهة الزائرة</th><th>الغرض الفعلي</th><th>التوصيات والملاحظات</th><th>المسؤول</th></tr></thead><tbody>${vRows || '<tr><td colspan="5">لا توجد زيارات</td></tr>'}</tbody></table>
+                <div class="btn-area"><button class="btn" onclick="window.print()">تصدير وحفظ المستند بصيغة PDF 📥</button></div></body></html>
             `);
             reportWindow.document.close();
         }
 
         window.onload = function() {
+            initWelcomeScreen(); // إطلاق العبارة الترحيبية العشوائية المبهجة فوراً
             renderTankInputs();
             calculateCalculated();
-            updateDashboardWidgets();
+            syncFirebaseData();
         };
     </script>
 </body>
