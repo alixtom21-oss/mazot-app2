@@ -5,11 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>النظام المركزي المطور للمنشأة</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-    
-    <!-- تضمين مكتبات Firebase السحابية الرسمية -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script>
+  var firebaseConfig = {
+    apiKey: "AIzaSyD76QEo39YACXf6AjpR_RWTHAB3THSs0Sg",
+    authDomain: "mazot-app.firebaseapp.com",
+    projectId: "mazot-app",
+    storageBucket: "mazot-app.firebasestorage.app",
+    messagingSenderId: "21633076074",
+    appId: "1:21633076074:web:b45584ec4ebb992c563313"
+  };
+  firebase.initializeApp(firebaseConfig);
+  var db = firebase.firestore();
+  db.enablePersistence().catch(function(err) {
+    console.log("Offline error: " + err.code);
+  });
+  window.db = db;
+</script>
+    
 
     <style>
         /* ── نفس التنسيقات والواجهات الأصلية المحمية من التداخل تماماً ── */
